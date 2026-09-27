@@ -1,4 +1,4 @@
-import { Container, Section, SectionHeader, Serif } from "@/components/ui/layout";
+import { Container, Section, SectionHeader } from "@/components/ui/layout";
 import { BuiltForCards } from "./BuiltForCards";
 
 export function BuiltFor() {
@@ -8,11 +8,8 @@ export function BuiltFor() {
         <SectionHeader
           id="built-for-title"
           eyebrow="Built for"
-          title={
-            <>
-              Made for people who present on <Serif>screen</Serif>.
-            </>
-          }
+          title="Made for people who present on screen."
+          serif="screen"
           subhead="For anyone whose audience is watching a screen."
         />
         <BuiltForCards />

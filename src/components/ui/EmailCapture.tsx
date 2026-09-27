@@ -1,25 +1,30 @@
 "use client";
 
-import { useId, useState } from "react";
-import { Arrow } from "@/components/ui/button";
+import { useId, useRef, useState } from "react";
+import { animate, m, useReducedMotion } from "motion/react";
+import { Arrow, Beam, buttonClasses } from "@/components/ui/button";
 import { FORM_IDS } from "@/components/ui/JumpToForm";
 import { cn } from "@/lib/cn";
+import { EASE } from "@/lib/motion";
 import type { WaitlistResponse, WaitlistSource, WaitlistStatus } from "@/lib/waitlist/types";
 import { isValidEmail } from "@/lib/waitlist/validate";
 
 type FormState = "idle" | "submitting" | WaitlistStatus;
 
-const messages: Partial<Record<FormState, string>> = {
-  joined: "You're on the list. We'll email you when it's ready.",
-  already_joined: "You're already on the list. We'll be in touch.",
+const done = (state: FormState) => state === "joined" || state === "already_joined";
+
+const errors: Partial<Record<FormState, string>> = {
   invalid: "That email doesn't look right. Please check it.",
   rate_limited: "Too many tries. Please wait a few minutes.",
   error: "Something went wrong on our side. Please try again.",
 };
 
-const isSuccess = (state: FormState) => state === "joined" || state === "already_joined";
-
-/** Email and button inside one 56px pill. */
+/**
+ * Email and button in one 56px pill. The submit button is the single morphing
+ * element: it shows a spinner while sending, then grows across the pill into
+ * the success state with a checkmark and a burst of ember pixels. Errors shake
+ * the pill and explain what happened below it.
+ */
 export function EmailCapture({
   source,
   hint,
@@ -34,17 +39,27 @@ export function EmailCapture({
 }) {
   const id = FORM_IDS[source];
   const statusId = useId();
+  const pillRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const [email, setEmail] = useState("");
   const [state, setState] = useState<FormState>("idle");
+  // Where the success panel grows from: the button's share of the pill width.
+  const [from, setFrom] = useState(0.3);
   const dark = tone === "dark";
+  const reduce = useReducedMotion();
+
+  // A gentle three-step shake. Imperative, so the input keeps its focus.
+  function fail(next: FormState) {
+    setState(next);
+    if (pillRef.current && !reduce) {
+      animate(pillRef.current, { x: [0, -6, 5, -3, 0] }, { duration: 0.4, ease: "easeOut" });
+    }
+  }
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (state === "submitting") return;
-    if (!isValidEmail(email)) {
-      setState("invalid");
-      return;
-    }
+    if (state === "submitting" || done(state)) return;
+    if (!isValidEmail(email)) return fail("invalid");
 
     setState("submitting");
     const company = new FormData(event.currentTarget).get("company");
@@ -55,32 +70,39 @@ export function EmailCapture({
         body: JSON.stringify({ email, source, company }),
       });
       const data = (await response.json()) as WaitlistResponse;
-      setState(data.status in messages ? data.status : "error");
-      if (isSuccess(data.status)) setEmail("");
+      if (done(data.status)) {
+        const pill = pillRef.current?.clientWidth ?? 1;
+        setFrom((buttonRef.current?.offsetWidth ?? pill * 0.3) / pill);
+        setState(data.status);
+        setEmail("");
+      } else fail(data.status in errors ? data.status : "error");
     } catch {
-      setState("error");
+      fail("error");
     }
   }
 
-  const message = messages[state];
-  const hasError = message !== undefined && !isSuccess(state);
+  const error = errors[state];
+  const message = done(state) ? "We'll email you as soon as it's ready." : (error ?? hint);
 
   return (
-    <form
-      id={id}
-      noValidate
-      onSubmit={onSubmit}
-      className={cn("relative mx-auto w-full max-w-[500px]", className)}
-    >
+    <form id={id} noValidate onSubmit={onSubmit} className={cn("relative mx-auto w-full max-w-[500px]", className)}>
       <div
+        ref={pillRef}
         className={cn(
-          "flex h-14 items-center gap-2 rounded-full border py-1.5 pr-1.5 pl-5 sm:pl-6",
-          "has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-3",
+          "group/pill relative flex h-14 items-center gap-2 rounded-full border py-1.5 pr-1.5 pl-5 sm:pl-6",
           dark
-            ? "border-stage-line bg-stage-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] has-[input:focus-visible]:outline-stage-ink"
-            : "border-hairline-strong bg-surface shadow-[0_1px_2px_rgba(11,11,12,0.04)] has-[input:focus-visible]:outline-ink",
+            ? "border-stage-line bg-stage-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+            : "border-hairline-strong bg-surface shadow-[0_1px_2px_rgba(11,11,12,0.04),0_12px_32px_-18px_rgba(11,11,12,0.25)]",
         )}
       >
+        {/* Focus ring: fades and scales in around the whole pill. */}
+        <span
+          aria-hidden="true"
+          className={cn(
+            "pointer-events-none absolute -inset-[4px] scale-[0.98] rounded-full border-2 opacity-0 transition-[opacity,transform] duration-300 ease-brand group-has-[input:focus-visible]/pill:scale-100 group-has-[input:focus-visible]/pill:opacity-100",
+            dark ? "border-stage-ink/80" : "border-ink/80",
+          )}
+        />
         <label htmlFor={`${id}-email`} className="sr-only">
           Email address
         </label>
@@ -93,11 +115,12 @@ export function EmailCapture({
           placeholder="you@example.com"
           required
           value={email}
+          disabled={done(state)}
           onChange={(event) => {
             setEmail(event.target.value);
-            if (hasError) setState("idle");
+            if (error) setState("idle");
           }}
-          aria-invalid={hasError || undefined}
+          aria-invalid={Boolean(error) || undefined}
           aria-describedby={statusId}
           className={cn(
             "h-full w-full min-w-0 flex-1 bg-transparent text-[16px] outline-none",
@@ -105,16 +128,37 @@ export function EmailCapture({
           )}
         />
         <button
+          ref={buttonRef}
           type="submit"
           disabled={state === "submitting"}
-          className={cn(
-            "group relative inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-4 text-[15px] font-medium whitespace-nowrap transition-opacity duration-150 hover:opacity-90 disabled:opacity-60 sm:px-5",
-            dark ? "bg-stage-ink text-ink" : "bg-ink text-bg",
-          )}
+          aria-label={state === "submitting" ? "Joining the waitlist" : undefined}
+          className={buttonClasses({
+            variant: dark ? "light" : "primary",
+            className: cn("h-11 px-4 sm:px-5", done(state) && "pointer-events-none opacity-0"),
+          })}
         >
-          {state === "submitting" ? "Joining…" : "Get early access"}
-          <Arrow className="hidden sm:block" />
+          <Beam />
+          <span className="grid place-items-center">
+            <span
+              className={cn(
+                "col-start-1 row-start-1 flex items-center gap-2 transition-opacity duration-200",
+                state === "submitting" && "opacity-0",
+              )}
+            >
+              Get early access
+              <Arrow className="hidden sm:block" />
+            </span>
+            <span
+              aria-hidden="true"
+              className={cn(
+                "col-start-1 row-start-1 size-5 animate-spin rounded-full border-2 border-current border-t-transparent opacity-0 transition-opacity duration-200",
+                state === "submitting" && "opacity-100",
+              )}
+            />
+          </span>
         </button>
+
+        {done(state) && <Success from={from} dark={dark} already={state === "already_joined"} />}
       </div>
 
       {/* Honeypot: hidden from people and assistive tech. */}
@@ -130,23 +174,65 @@ export function EmailCapture({
         aria-live="polite"
         className={cn(
           "mt-3 flex min-h-6 items-center justify-center gap-2 text-[15px] leading-6",
-          message ? (dark ? "text-stage-ink" : "text-ink") : dark ? "text-stage-muted" : "text-muted",
+          error ? (dark ? "text-stage-ink" : "text-ink") : dark ? "text-stage-muted" : "text-muted",
         )}
       >
-        {!message && hint}
-        {message && (
-          <>
-            <span
-              aria-hidden="true"
-              className={cn(
-                "size-1.5 shrink-0 rounded-full",
-                isSuccess(state) ? "bg-accent" : dark ? "bg-stage-ink" : "bg-ink",
-              )}
-            />
-            {message}
-          </>
-        )}
+        {error && <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-accent" />}
+        {done(state) && <span className="sr-only">{state === "joined" ? "You're on the list." : "You're already on the list."}</span>}
+        {message}
       </p>
     </form>
+  );
+}
+
+const BURST = Array.from({ length: 14 }, (_, i) => {
+  const angle = (i / 14) * Math.PI * 2 + (i % 2 ? 0.2 : -0.1);
+  const distance = 34 + (i % 4) * 11;
+  return { x: Math.cos(angle) * distance, y: Math.sin(angle) * distance * 0.8, size: i % 3 === 0 ? 6 : 4 };
+});
+
+/** The button grown across the pill: checkmark, message and a pixel burst. */
+function Success({ from, dark, already }: { from: number; dark: boolean; already: boolean }) {
+  return (
+    <m.div
+      aria-hidden="true"
+      className={cn(
+        "absolute inset-[6px] flex items-center justify-center gap-2.5 rounded-full text-[15px] font-medium",
+        dark ? "bg-stage-ink text-ink" : "bg-[#1c1c1f] text-bg",
+      )}
+      initial={{ scaleX: from }}
+      animate={{ scaleX: 1 }}
+      transition={{ duration: 0.55, ease: EASE }}
+      style={{ originX: 1 }}
+    >
+      <m.span
+        className="relative flex items-center gap-2.5"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.35, duration: 0.3 }}
+      >
+        <span className="relative grid size-6 place-items-center rounded-full bg-accent">
+          <svg viewBox="0 0 16 16" className="size-3.5" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <m.path
+              d="M3.5 8.5l2.8 2.7 6.2-6.7"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ delay: 0.35, duration: 0.45, ease: EASE }}
+            />
+          </svg>
+          {BURST.map((pixel, index) => (
+            <m.span
+              key={index}
+              className="absolute top-1/2 left-1/2 bg-accent"
+              style={{ width: pixel.size, height: pixel.size, marginLeft: -pixel.size / 2, marginTop: -pixel.size / 2 }}
+              initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+              animate={{ x: pixel.x, y: pixel.y, opacity: 0, scale: 0.5 }}
+              transition={{ delay: 0.4, duration: 0.75, ease: EASE }}
+            />
+          ))}
+        </span>
+        {already ? "You're already on the list" : "You're on the list"}
+      </m.span>
+    </m.div>
   );
 }

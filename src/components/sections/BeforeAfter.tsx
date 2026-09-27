@@ -1,4 +1,4 @@
-import { Container, Section, SectionHeader, Serif } from "@/components/ui/layout";
+import { Container, Section, SectionHeader } from "@/components/ui/layout";
 import { Reveal } from "@/components/ui/Reveal";
 import { CompareSlider } from "./CompareSlider";
 
@@ -9,11 +9,8 @@ export function BeforeAfter() {
         <SectionHeader
           id="why-title"
           eyebrow="Why motion"
-          title={
-            <>
-              Static slides lose the <Serif>room</Serif>.
-            </>
-          }
+          title="Static slides lose the room."
+          serif="room"
           subhead="Same slide. Same words. Only one holds attention."
           className="lg:col-span-5 xl:col-span-4"
         />

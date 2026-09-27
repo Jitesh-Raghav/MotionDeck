@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   useAnimationFrame,
   useInView,
@@ -43,6 +43,42 @@ export function useLoopClock(total: number, playing: boolean, settled = total - 
   });
 
   return clock;
+}
+
+/**
+ * True once the element comes within `margin` of the viewport, and stays
+ * true. Heavy decorative content below the fold mounts only then, which keeps
+ * the first load's DOM (and hydration) small.
+ */
+export function useNear<T extends Element>(margin = "800px") {
+  const ref = useRef<T>(null);
+  const [near, setNear] = useState(false);
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        setNear(true);
+        observer.disconnect();
+      },
+      { rootMargin: margin },
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [margin]);
+  return { ref, near };
+}
+
+/**
+ * `onScreen` for running a loop, plus `near`: true once the element comes
+ * within 800px of the viewport, so heavy visuals can mount only then.
+ */
+export function useNearOnScreen<T extends Element>(amount = 0.15) {
+  const ref = useRef<T>(null);
+  const onScreen = useInView(ref, { amount });
+  const near = useInView(ref, { margin: "800px", once: true });
+  return { ref, onScreen, near };
 }
 
 /** Loop only while at least a sliver of the element is on screen. */

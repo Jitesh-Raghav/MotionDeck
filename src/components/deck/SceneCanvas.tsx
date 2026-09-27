@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { Clock } from "@/components/anim/clock";
 import { cn } from "@/lib/cn";
-import { SCENES, type SceneName } from "./scenes";
+import type { SceneName } from "./scenes";
 import { SLIDE_MS } from "./timing";
 
 /**
@@ -28,7 +28,8 @@ export function SceneCanvas({
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
-    const draw = SCENES[scene];
+    let draw: ((ctx: CanvasRenderingContext2D, w: number, h: number, t: number) => void) | null = null;
+    let cancelled = false;
     let width = 0;
     let height = 0;
     let dpr = 1;
@@ -44,7 +45,7 @@ export function SceneCanvas({
       }
       lastDraw = now;
       const t = clock.get() - start;
-      if (t < -200 || t > SLIDE_MS + 200 || width === 0) return;
+      if (!draw || t < -200 || t > SLIDE_MS + 200 || width === 0) return;
       ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx!.clearRect(0, 0, width, height);
       draw(ctx!, width, height, Math.max(0, t));
@@ -55,10 +56,14 @@ export function SceneCanvas({
     };
 
     const resize = () => {
+      // Draw in layout pixels (ignoring CSS transforms), so a scaled-down
+      // thumbnail keeps the slide's proportions; sharpen by the real on-screen
+      // scale so it doesn't use more pixels than it shows.
       const box = canvas.getBoundingClientRect();
-      dpr = Math.min(2, window.devicePixelRatio || 1);
-      width = box.width;
-      height = box.height;
+      width = canvas.offsetWidth;
+      height = canvas.offsetHeight;
+      const onScreen = width ? box.width / width : 1;
+      dpr = Math.min(2, window.devicePixelRatio || 1) * Math.min(1, onScreen);
       canvas.width = Math.max(1, Math.round(width * dpr));
       canvas.height = Math.max(1, Math.round(height * dpr));
       schedule();
@@ -68,7 +73,13 @@ export function SceneCanvas({
     observer.observe(canvas);
     resize();
     const unsubscribe = clock.on("change", schedule);
+    import("./scenes").then(({ SCENES }) => {
+      if (cancelled) return;
+      draw = SCENES[scene];
+      schedule();
+    });
     return () => {
+      cancelled = true;
       unsubscribe();
       observer.disconnect();
       cancelAnimationFrame(frame);

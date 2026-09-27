@@ -1,6 +1,7 @@
 import { Container } from "@/components/ui/layout";
 import { cn } from "@/lib/cn";
 import { site } from "@/lib/site";
+import { FooterWordmark } from "./FooterWordmark";
 
 const links = [
   { href: "/#how-it-works", label: "How it works" },
@@ -11,16 +12,17 @@ const links = [
   { href: `mailto:${site.contactEmail}`, label: "Contact" },
 ];
 
-export function Footer({ overlap = false }: { overlap?: boolean }) {
+/** `afterStage`: the dark stage above already ends in a pixel edge, so no rule. */
+export function Footer({ afterStage = false }: { afterStage?: boolean }) {
   return (
-    <footer
-      className={cn(
-        "relative overflow-hidden bg-bg",
-        // On the home page it rises over the dark stage above with rounded corners.
-        overlap ? "z-10 -mt-10 rounded-t-stage" : "border-t border-hairline",
-      )}
-    >
-      <Container className="flex flex-col gap-6 pt-14 md:flex-row md:items-center md:justify-between md:pt-16">
+    <footer className={cn("relative overflow-hidden bg-bg", !afterStage && "border-t border-hairline")}>
+      <Container
+        className={cn(
+          "flex flex-col gap-6 md:flex-row md:items-center md:justify-between",
+          // Leave room for the pixel edge dissolving down from the stage.
+          afterStage ? "pt-28" : "pt-14 md:pt-16",
+        )}
+      >
         <p className="text-[15px] text-muted">
           © {new Date().getFullYear()} Motiondeck. {site.tagline}
         </p>
@@ -36,26 +38,9 @@ export function Footer({ overlap = false }: { overlap?: boolean }) {
           </ul>
         </nav>
       </Container>
-      {/*
-        Huge wordmark cropped by the bottom edge. It's a decorative graphic,
-        so it's drawn as SVG and stretched to exactly the full width.
-      */}
+      {/* Huge pixel wordmark, cropped by the bottom edge; it dithers in on view. */}
       <div aria-hidden="true" className="mt-10 overflow-hidden select-none md:mt-14">
-        <svg viewBox="0 0 1000 150" className="-mb-[3%] block w-full" preserveAspectRatio="xMidYMin meet">
-          <text
-            x="500"
-            y="176"
-            textAnchor="middle"
-            textLength="990"
-            lengthAdjust="spacingAndGlyphs"
-            fontSize="236"
-            fontWeight={500}
-            letterSpacing="-10"
-            fill="rgba(11,11,12,0.06)"
-          >
-            Motiondeck
-          </text>
-        </svg>
+        <FooterWordmark />
       </div>
     </footer>
   );

@@ -1,7 +1,8 @@
-import { buttonClasses } from "@/components/ui/button";
+import { Beam, buttonClasses } from "@/components/ui/button";
 import { JumpToForm } from "@/components/ui/JumpToForm";
-import { Container, Section, SectionHeader, Serif } from "@/components/ui/layout";
+import { Container, Section, SectionHeader } from "@/components/ui/layout";
 import { Reveal } from "@/components/ui/Reveal";
+import { SpotlightCard } from "@/components/ui/SpotlightCard";
 import { cn } from "@/lib/cn";
 import { STAGGER } from "@/lib/motion";
 
@@ -42,17 +43,15 @@ export function Pricing() {
           id="pricing-title"
           align="center"
           eyebrow="Early access pricing"
-          title={
-            <>
-              Simple pricing. Start <Serif>free</Serif>.
-            </>
-          }
+          title="Simple pricing. Start free."
+          serif="free"
           subhead="Early-access pricing. Upgrade only when you need more."
         />
-        <ul className="mx-auto mt-14 grid max-w-[1120px] gap-4 md:mt-20 md:grid-cols-3 md:gap-5">
+        <ul className="mx-auto mt-12 grid max-w-[1120px] gap-4 md:mt-14 md:grid-cols-3 md:gap-5">
           {plans.map((plan, index) => (
             <Reveal key={plan.name} as="li" delay={index * STAGGER} className="flex">
-              <article
+              <SpotlightCard
+                spot={plan.featured ? "rgba(255,255,255,0.08)" : "rgba(255,90,31,0.07)"}
                 className={cn(
                   "flex w-full flex-col rounded-card p-8",
                   plan.featured
@@ -60,6 +59,7 @@ export function Pricing() {
                     : "border border-hairline bg-surface",
                 )}
               >
+                {plan.featured && <Beam />}
                 <div className="flex items-center justify-between gap-3">
                   <h3 className="text-[18px] font-medium">{plan.name}</h3>
                   {plan.featured && (
@@ -94,9 +94,10 @@ export function Pricing() {
                     className: "w-full",
                   })}
                 >
+                  {plan.featured && <Beam />}
                   Join the waitlist
                 </JumpToForm>
-              </article>
+              </SpotlightCard>
             </Reveal>
           ))}
         </ul>

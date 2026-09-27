@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Arrow, buttonClasses } from "@/components/ui/button";
+import { Arrow, Beam, buttonClasses } from "@/components/ui/button";
 import { JumpToForm } from "@/components/ui/JumpToForm";
 import { Wordmark } from "@/components/ui/Wordmark";
 import { cn } from "@/lib/cn";
@@ -53,6 +53,7 @@ export function Nav() {
           </ul>
         </nav>
         <JumpToForm target="hero" className={buttonClasses({ size: "sm", className: "relative" })}>
+          <Beam />
           Get early access
           <Arrow />
         </JumpToForm>
