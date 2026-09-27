@@ -1,10 +1,9 @@
 "use client";
 
-import { useId } from "react";
 import { m, useTransform } from "motion/react";
 import { CountUp } from "@/components/anim/CountUp";
 import { LineDraw } from "@/components/anim/LineDraw";
-import { svgId, useSpan, type Clock } from "@/components/anim/clock";
+import { useSpan, type Clock } from "@/components/anim/clock";
 import { cn } from "@/lib/cn";
 
 /*
@@ -378,106 +377,4 @@ function FeatureCard({ clock, at, item }: { clock: Clock; at: number; item: Feat
       <p className="mt-[calc(var(--u)*0.6)] text-[max(7px,calc(var(--u)*1.6))] text-[var(--s-muted)]">{item.body}</p>
     </m.div>
   );
-}
-
-/* Black hole: a hot accretion disk wraps a dark event horizon while matter orbits. */
-
-const STARS = Array.from({ length: 22 }, (_, i) => {
-  const r = (n: number) => ((Math.sin(i * 12.9898 + n * 78.233) * 43758.5453) % 1 + 1) % 1;
-  return { x: round(r(1) * 400), y: round(r(2) * 220), size: round(0.7 + r(3) * 1.1), phase: r(4) * 6.28 };
-});
-
-const CX = 200;
-const CY = 118;
-const RX = 138;
-const RY = 30;
-
-export function BlackHoleDiagram({ clock, start }: { clock: Clock; start: number }) {
-  const heat = `disk-heat-${svgId(useId())}`;
-  const disk = useSpan(clock, start + 200, 900);
-  const hole = useSpan(clock, start + 400, 700);
-  const holeScale = useTransform(hole, [0, 1], [0.6, 1]);
-  const labelA = useSpan(clock, start + 1300, 500);
-  const labelB = useSpan(clock, start + 1600, 500);
-  const upper = `M ${CX - RX} ${CY} A ${RX} ${RY} 0 0 1 ${CX + RX} ${CY}`;
-  const lower = `M ${CX - RX} ${CY} A ${RX} ${RY} 0 0 0 ${CX + RX} ${CY}`;
-
-  return (
-    <svg viewBox="0 0 400 220" className="h-full w-auto max-w-full overflow-visible" aria-hidden="true">
-      <defs>
-        <linearGradient id={heat} x1="0" x2="1">
-          <stop offset="0" stopColor="#FF5A1F" stopOpacity="0.2" />
-          <stop offset="0.5" stopColor="#FFB36B" />
-          <stop offset="1" stopColor="#FF5A1F" stopOpacity="0.2" />
-        </linearGradient>
-      </defs>
-      {STARS.map((star, index) => (
-        <Star key={index} clock={clock} {...star} />
-      ))}
-      {/* Far side of the disk, behind the hole. */}
-      <m.g style={{ opacity: disk }}>
-        <path d={upper} fill="none" stroke={`url(#${heat})`} strokeWidth={14} strokeOpacity={0.18} />
-        <path d={upper} fill="none" stroke={`url(#${heat})`} strokeWidth={4} />
-      </m.g>
-      {Array.from({ length: 12 }, (_, i) => (
-        <OrbitParticle key={`back-${i}`} clock={clock} start={start} index={i} side="back" />
-      ))}
-      <m.g style={{ scale: holeScale, opacity: hole, originX: 0.5, originY: 0.5, transformBox: "fill-box" }}>
-        <circle cx={CX} cy={CY} r={40} fill="none" stroke="#FFB36B" strokeOpacity={0.35} strokeWidth={6} />
-        <circle cx={CX} cy={CY} r={36} fill="#000" stroke="var(--s-ink)" strokeOpacity={0.7} strokeWidth={1.2} />
-      </m.g>
-      {/* Near side of the disk, in front of the hole. */}
-      <m.g style={{ opacity: disk }}>
-        <path d={lower} fill="none" stroke={`url(#${heat})`} strokeWidth={16} strokeOpacity={0.2} />
-        <path d={lower} fill="none" stroke={`url(#${heat})`} strokeWidth={5} />
-      </m.g>
-      {Array.from({ length: 12 }, (_, i) => (
-        <OrbitParticle key={`front-${i}`} clock={clock} start={start} index={i} side="front" />
-      ))}
-      <m.g style={{ opacity: labelA }}>
-        <line x1={CX - 30} y1={CY - 24} x2={CX - 92} y2={CY - 70} stroke="var(--s-muted)" strokeWidth={1} />
-        <text x={CX - 96} y={CY - 76} textAnchor="end" fontSize={13} fill="var(--s-ink)" className="@max-[480px]:text-[17px]">
-          Event horizon
-        </text>
-      </m.g>
-      <m.g style={{ opacity: labelB }}>
-        <line x1={CX + 110} y1={CY + 20} x2={CX + 150} y2={CY + 62} stroke="var(--s-muted)" strokeWidth={1} />
-        <text x={CX + 146} y={CY + 80} textAnchor="start" fontSize={13} fill="var(--s-ink)" className="@max-[480px]:text-[17px]">
-          Accretion disk
-        </text>
-      </m.g>
-    </svg>
-  );
-}
-
-function Star({ clock, x, y, size, phase }: { clock: Clock; x: number; y: number; size: number; phase: number }) {
-  const opacity = useTransform(clock, (time) => 0.15 + 0.35 * (0.5 + 0.5 * Math.sin(time / 420 + phase)));
-  return <m.circle cx={x} cy={y} r={size} fill="var(--s-ink)" style={{ opacity }} />;
-}
-
-/**
- * A particle on the disk ellipse. Each is drawn twice (behind and in front of
- * the hole) and shows only on its current side, so the hole hides it.
- */
-function OrbitParticle({
-  clock,
-  start,
-  index,
-  side,
-}: {
-  clock: Clock;
-  start: number;
-  index: number;
-  side: "back" | "front";
-}) {
-  const speed = 900 + (index % 4) * 260;
-  const angleAt = (time: number) => (index / 12) * Math.PI * 2 + (time - start) / speed;
-  const x = useTransform(clock, (time) => Math.cos(angleAt(time)) * RX * (0.8 + (index % 3) * 0.1));
-  const y = useTransform(clock, (time) => Math.sin(angleAt(time)) * RY * (0.8 + (index % 3) * 0.1));
-  const opacity = useTransform(clock, (time) => {
-    if (time < start + 500) return 0;
-    const inFront = Math.sin(angleAt(time)) > 0;
-    return (side === "front") === inFront ? 0.9 : 0;
-  });
-  return <m.circle cx={CX} cy={CY} r={index % 3 === 0 ? 2.4 : 1.6} fill="#FFD2A8" style={{ x, y, opacity }} />;
 }

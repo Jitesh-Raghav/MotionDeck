@@ -33,6 +33,8 @@ Rate limiting is in memory (5 requests per 10 minutes per IP), so each serverles
 - `src/app/layout.tsx` — fonts, and the inline script that adds `.js` and the 1.5s reveal safety net
 - `src/components/sections/` — one file per page section
 - `src/components/deck/` — the pre-scripted example decks and the slide renderer. Slides size themselves from `--u`, so one slide works at 16:9, 1:1 and 9:16
+- `src/components/deck/scenes.ts` — the canvas motion graphics behind each example slide (black hole, rocket, money curve, radar…). Each scene is a pure function of time, so it pauses and loops with the deck
+- `src/components/hero/HeroBackdrop.tsx` — the hero background: ASCII flames, pixel glow, sparks and pixel slide cards, kept clear of the copy
 - `src/components/hero/HeroShowcase.tsx` — the example chips and the product window (typing prompt, thumbnail rail, playhead, scroll tilt)
 - `src/components/story/` — the pinned "How it works" story and its three scenes
 - `src/components/anim/` — animation primitives (count-up, bars, line, timeline, list, compare, type reveal, section wipe). Each reads a clock `MotionValue`; `useLoopClock` loops them and pauses off screen

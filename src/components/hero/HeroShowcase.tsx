@@ -55,6 +55,18 @@ const useWideScreen = () =>
 export function HeroShowcase() {
   const [deckIndex, setDeckIndex] = useState(0);
   const [paused, setPaused] = useState(false);
+  // Start once the page has settled, so the demo never competes with first load.
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const start = () => setReady(true);
+    const id = window.requestIdleCallback
+      ? window.requestIdleCallback(start, { timeout: 1200 })
+      : window.setTimeout(start, 600);
+    return () => {
+      if (window.cancelIdleCallback) window.cancelIdleCallback(id);
+      else window.clearTimeout(id);
+    };
+  }, []);
   const deck = DECKS[deckIndex];
   const timing = useMemo(() => timingFor(deck), [deck]);
   const reduce = useReducedMotion();
@@ -71,7 +83,7 @@ export function HeroShowcase() {
   }, [clock, deckIndex, reduce, timing]);
 
   useAnimationFrame((_, delta) => {
-    if (reduce || paused || !onScreen || switching.current) return;
+    if (!ready || reduce || paused || !onScreen || switching.current) return;
     const next = clock.get() + Math.min(delta, MAX_STEP);
     if (next >= timing.total) {
       // Loop through the examples.

@@ -145,6 +145,45 @@
   }
 }
 
+/*
+ * Motion-graphic scenes inside slides. "right" sits beside the text and
+ * fades in from its left edge; "full" fills the slide behind the content.
+ * In tall frames the right-hand scene moves to the lower half.
+ */
+.scene-right {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 60%;
+  mask-image: linear-gradient(to right, transparent, black 32%);
+}
+
+.scene-full {
+  position: absolute;
+  inset: 0;
+  mask-image: linear-gradient(to right, rgba(0, 0, 0, 0.35), black 55%);
+}
+
+/* Keeps text clear of a right-hand scene. */
+.scene-text {
+  max-width: 54%;
+}
+
+@container slide (aspect-ratio < 3 / 4) {
+  .scene-right {
+    top: auto;
+    left: 0;
+    width: 100%;
+    height: 50%;
+    mask-image: linear-gradient(to bottom, transparent, black 30%);
+  }
+
+  .scene-text {
+    max-width: none;
+  }
+}
+
 /* Multi-column slide layouts stack in tall (9:16) frames. */
 @container slide (aspect-ratio < 3 / 4) {
   .slide-stack {

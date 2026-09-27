@@ -7,6 +7,7 @@ import { useEffect, useRef } from "react";
  *   1. a pixel-dithered glow sitting on the product window's top edge (a horizon)
  *   2. ASCII flame tongues rising from that horizon up both sides of the screen
  *   3. pixel sparks drifting up out of the flames
+ *   4. pixel-art slide cards floating in the upper corners, charts animating inside
  * Every piece of copy (marked data-hero-clear) is measured and kept clear. It starts
  * once the page is idle, runs only while visible, and shows one still frame
  * for reduced motion.
@@ -54,8 +55,7 @@ const SPARKS = Array.from({ length: 70 }, (_, i) => {
   return { side: r(1) < 0.5 ? -1 : 1, spread: r(2), speed: 18 + r(3) * 34, phase: r(4), size: r(5) < 0.3 ? 4 : 3 };
 });
 
-const FLAME_CELL_W = 11;
-const FLAME_CELL_H = 16;
+const FLAME_CELL = { wide: [11, 16], narrow: [14, 20] } as const;
 const PIXEL = 7;
 
 export function HeroBackdrop() {
@@ -80,6 +80,10 @@ export function HeroBackdrop() {
     let clearBoxes: Array<{ left: number; top: number; right: number; bottom: number }> = [];
     let raf = 0;
     let last = 0;
+    // Phones: bigger cells, 12 fps, no sparks.
+    let narrow = false;
+    let FLAME_CELL_W: number = FLAME_CELL.wide[0];
+    let FLAME_CELL_H: number = FLAME_CELL.wide[1];
     let lastGlow = -1;
     let onScreen = false;
     let started = false;
@@ -90,6 +94,8 @@ export function HeroBackdrop() {
       dpr = Math.min(2, window.devicePixelRatio || 1);
       W = box.width;
       H = box.height;
+      narrow = W < 768;
+      [FLAME_CELL_W, FLAME_CELL_H] = narrow ? FLAME_CELL.narrow : FLAME_CELL.wide;
       for (const c of [canvas!, glowLayer]) {
         c.width = Math.round(W * dpr);
         c.height = Math.round(H * dpr);
@@ -153,7 +159,7 @@ export function HeroBackdrop() {
         // Broad tongues whose heights drift and flicker; tallest at the outer edges.
         const reach = horizon * (0.12 + 0.88 * side ** 1.3);
         // Squaring the noise opens gaps between tongues.
-        const tongue = reach * (0.12 + 0.88 * fbm(x * 0.07, t * 0.55) ** 1.6) * (0.85 + 0.15 * noise(x * 0.4, t * 3));
+        const tongue = reach * (0.22 + 0.78 * fbm(x * 0.07, t * 0.55) ** 1.25) * (0.85 + 0.15 * noise(x * 0.4, t * 3));
         for (let y = Math.max(0, baseRow - Math.ceil(tongue / FLAME_CELL_H) - 1); y <= baseRow; y++) {
           const py = y * FLAME_CELL_H;
           const along = 1 - (horizon - py) / Math.max(1, tongue); // 1 at the base, 0 at the tip
@@ -171,8 +177,8 @@ export function HeroBackdrop() {
       const colors: Record<string, string> = {
         a: "rgba(255,90,31,0.85)",
         b: "rgba(255,122,58,0.62)",
-        c: "rgba(255,168,118,0.45)",
-        d: "rgba(11,11,12,0.11)",
+        c: "rgba(255,168,118,0.5)",
+        d: "rgba(11,11,12,0.16)",
       };
       for (const [key, list] of buckets) {
         ctx!.fillStyle = colors[key];
@@ -199,6 +205,79 @@ export function HeroBackdrop() {
       }
     }
 
+    /*
+     * Pixel-art slide cards: a dithered panel with a title bar and a chart that
+     * builds, holds and resets. Drawn cell by cell on a coarse grid.
+     */
+    const CARDS = [
+      { x: 0.035, dy: 12, cols: 32, rows: 18, kind: "bars", phase: 0 },
+      { x: 0.965, dy: 40, cols: 32, rows: 18, kind: "line", phase: 1.7 },
+    ] as const;
+
+    function drawCards(t: number) {
+      if (W < 1200) return;
+      const cell = 6;
+      // Anchor to the subhead (the third piece of hero copy).
+      const anchor = clearBoxes[2]?.top ?? H * 0.3;
+      for (const card of CARDS) {
+        const width = card.cols * cell;
+        const left = card.x < 0.5 ? Math.round(W * card.x) : Math.round(W * card.x - width);
+        const top = Math.round((anchor + card.dy) / cell) * cell + Math.round(Math.sin(t * 0.7 + card.phase) * 1.5) * cell;
+        const cycle = ((t + card.phase * 2) % 5) / 5; // 0..1 over five seconds
+        const build = Math.min(1, cycle / 0.55);
+        const fade = cycle > 0.88 ? 1 - (cycle - 0.88) / 0.12 : 1;
+        const put = (cx: number, cy: number, color: string) => {
+          const x = left + cx * cell;
+          const y = top + cy * cell;
+          const a = openness(x + cell / 2, y + cell / 2);
+          if (a < 0.05) return;
+          ctx!.globalAlpha = a;
+          ctx!.fillStyle = color;
+          ctx!.fillRect(x, y, cell - 1, cell - 1);
+        };
+        // Panel: solid border, dithered body.
+        for (let cy = 0; cy < card.rows; cy++) {
+          for (let cx = 0; cx < card.cols; cx++) {
+            const edge = cx === 0 || cy === 0 || cx === card.cols - 1 || cy === card.rows - 1;
+            if (edge) put(cx, cy, "rgba(11,11,12,0.16)");
+            else if (BAYER[(cy % 4) * 4 + (cx % 4)] < 0.1) put(cx, cy, "rgba(11,11,12,0.08)");
+          }
+        }
+        // Title bar and a subtitle line.
+        for (let cx = 3; cx < 15; cx++) put(cx, 3, "rgba(11,11,12,0.28)");
+        for (let cx = 3; cx < 10; cx++) put(cx, 5, "rgba(11,11,12,0.13)");
+        put(card.cols - 4, 3, "rgba(255,90,31,0.8)");
+
+        const base = card.rows - 4;
+        if (card.kind === "bars") {
+          const heights = [3, 5, 4, 7, 9];
+          heights.forEach((height, b) => {
+            const grow = Math.max(0, Math.min(1, build * heights.length - b));
+            const shown = Math.round(height * grow);
+            for (let k = 0; k < shown; k++) {
+              for (let wdt = 0; wdt < 3; wdt++) {
+                put(4 + b * 6 + wdt, base - k, b === heights.length - 1 ? `rgba(255,90,31,${0.85 * fade})` : `rgba(11,11,12,${0.3 * fade})`);
+              }
+            }
+          });
+        } else {
+          const span = card.cols - 8;
+          const shown = Math.round(span * build);
+          for (let k = 0; k <= shown; k++) {
+            const u = k / span;
+            const cy = base - Math.round(u ** 1.8 * 9 + Math.sin(u * 9) * 0.8);
+            put(4 + k, cy, `rgba(11,11,12,${0.34 * fade})`);
+            // Soft fill under the line.
+            for (let fill = cy + 2; fill <= base; fill += 2) {
+              if ((4 + k + fill) % 2 === 0) put(4 + k, fill, `rgba(255,90,31,${0.12 * fade})`);
+            }
+            if (k === shown) put(4 + k, cy, `rgba(255,90,31,${0.9 * fade})`);
+          }
+        }
+        ctx!.globalAlpha = 1;
+      }
+    }
+
     function render(now: number) {
       const t = (now - t0) / 1000;
       // The dithered glow changes slowly; redraw it at ~8 fps.
@@ -210,13 +289,14 @@ export function HeroBackdrop() {
       ctx!.drawImage(glowLayer, 0, 0, W, H);
       ctx!.font = `${Math.round(FLAME_CELL_W * 1.1)}px ${mono}`;
       ctx!.textBaseline = "top";
+      drawCards(t);
       drawFlames(t);
-      drawSparks(t);
+      if (!narrow) drawSparks(t);
     }
 
     function frame(now: number) {
       raf = requestAnimationFrame(frame);
-      if (now - last < 42) return; // ~24 fps
+      if (now - last < (narrow ? 83 : 42)) return; // ~12 fps on phones, ~24 elsewhere
       last = now;
       render(now);
     }

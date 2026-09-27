@@ -12,7 +12,6 @@ import { cn } from "@/lib/cn";
 import type { SlideSpec } from "./decks";
 import {
   Backdrop,
-  BlackHoleDiagram,
   Callout,
   FeatureCards,
   KpiTiles,
@@ -21,6 +20,7 @@ import {
   TickRing,
   Versus,
 } from "./graphics";
+import { SceneCanvas } from "./SceneCanvas";
 import { SLIDE_MS } from "./timing";
 
 /*
@@ -37,6 +37,14 @@ export function SlideView({ slide, clock, start, className }: SlideViewProps) {
     <div className={cn("slide-root absolute inset-0", className)}>
       <div className="slide-inner absolute inset-0 overflow-hidden">
         <Backdrop kind={slide.backdrop ?? "none"} clock={clock} start={start} length={SLIDE_MS} />
+        {slide.scene && (
+          <SceneCanvas
+            scene={slide.scene.name}
+            clock={clock}
+            start={start}
+            className={cn("h-full w-full", slide.scene.place === "right" ? "scene-right" : "scene-full")}
+          />
+        )}
         <div className="absolute inset-0 flex flex-col px-[calc(var(--u)*7)] py-[calc(var(--u)*6)] text-left">
           <SlideBody slide={slide} clock={clock} start={start} />
         </div>
@@ -55,12 +63,12 @@ function SlideBody({ slide, clock, start }: { slide: SlideSpec; clock: Clock; st
   switch (slide.kind) {
     case "title":
       return (
-        <div className="my-auto">
+        <div className={cn("my-auto", slide.scene?.place === "right" && "scene-text")}>
           <Rule clock={clock} at={start + 150} />
           <Eyebrow clock={clock} at={start + 100}>
             {slide.eyebrow}
           </Eyebrow>
-          <p className="mt-[calc(var(--u)*1.6)] max-w-[92%] text-[calc(var(--u)*6.4)] leading-[1.04] font-medium tracking-[-0.035em] text-[var(--s-ink)]">
+          <p className="mt-[calc(var(--u)*1.6)] text-[calc(var(--u)*6.4)] leading-[1.04] font-medium tracking-[-0.035em] text-[var(--s-ink)]">
             <TypeReveal clock={clock} text={slide.title} start={start + 250} serifWords={[slide.serif]} />
           </p>
           <Fade clock={clock} at={start + 1000}>
@@ -74,7 +82,7 @@ function SlideBody({ slide, clock, start }: { slide: SlideSpec; clock: Clock; st
     case "stat":
       return (
         <>
-          <div className="my-auto">
+          <div className={cn("my-auto", slide.scene?.place === "right" && "scene-text")}>
             <Eyebrow clock={clock} at={start + 150}>
               {slide.eyebrow}
             </Eyebrow>
@@ -244,12 +252,54 @@ function SlideBody({ slide, clock, start }: { slide: SlideSpec; clock: Clock; st
       return (
         <>
           <Heading clock={clock} start={start} eyebrow={slide.eyebrow} title={slide.title} serif={slide.serif} />
-          <ChartArea>
-            <BlackHoleDiagram clock={clock} start={start} />
-          </ChartArea>
+          <div className="relative mt-[calc(var(--u)*2)] min-h-0 flex-1">
+            <SceneCanvas
+              scene="gargantua"
+              clock={clock}
+              start={start}
+              className="absolute inset-0 h-full w-full [mask-image:radial-gradient(ellipse_closest-side,black_62%,transparent)]"
+            />
+            <PartLabel clock={clock} at={start + 1300} className="top-[14%] left-[8%]">
+              Photon ring
+            </PartLabel>
+            <PartLabel clock={clock} at={start + 1550} className="top-[42%] left-[4%]">
+              Event horizon
+            </PartLabel>
+            <PartLabel clock={clock} at={start + 1800} className="right-[4%] bottom-[16%]">
+              Accretion disk
+            </PartLabel>
+          </div>
         </>
       );
   }
+}
+
+/** A small label naming part of a diagram. */
+function PartLabel({
+  clock,
+  at,
+  className,
+  children,
+}: {
+  clock: Clock;
+  at: number;
+  className: string;
+  children: React.ReactNode;
+}) {
+  const opacity = useSpan(clock, at, 500);
+  const x = useTransform(opacity, [0, 1], [-6, 0]);
+  return (
+    <m.span
+      className={cn(
+        "absolute flex items-center gap-[calc(var(--u)*0.8)] font-mono text-[max(7px,calc(var(--u)*1.35))] tracking-[0.08em] text-[var(--s-muted)] uppercase",
+        className,
+      )}
+      style={{ opacity, x }}
+    >
+      <span className="size-[calc(var(--u)*0.7)] rounded-full bg-accent" />
+      {children}
+    </m.span>
+  );
 }
 
 function ChartArea({ children }: { children: React.ReactNode }) {

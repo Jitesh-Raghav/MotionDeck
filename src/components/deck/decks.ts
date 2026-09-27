@@ -2,6 +2,7 @@ import type { BarDatum } from "@/components/anim/BarChart";
 import type { Milestone } from "@/components/anim/TimelineDraw";
 import { DECADES, END_VALUE, MILESTONES, START_VALUE, usd, valueAfter } from "@/lib/compound";
 import type { BackdropKind, Feature, Kpi, VersusSide } from "./graphics";
+import type { SceneName } from "./scenes";
 
 /*
  * Pre-scripted example decks for the landing page. These are hand-written,
@@ -9,7 +10,12 @@ import type { BackdropKind, Feature, Kpi, VersusSide } from "./graphics";
  * The numbers in the business decks are sample content.
  */
 
-type Base = { eyebrow: string; backdrop?: BackdropKind };
+type Base = {
+  eyebrow: string;
+  backdrop?: BackdropKind;
+  /** A motion-graphic scene: beside the text ("right") or behind everything ("full"). */
+  scene?: { name: SceneName; place: "right" | "full" };
+};
 
 export type SlideSpec = Base &
   (
@@ -55,9 +61,6 @@ const millions = (thousands: number) => `$${(thousands / 1000).toFixed(1)}M`;
 const count = (value: number) => value.toLocaleString("en-US");
 const percent = (value: number) => `${value}%`;
 
-// $10,000 at 7%, every 5 years, scaled 0–1.
-const GROWTH_CURVE = [0, 0.06, 0.15, 0.27, 0.43, 0.67, 1];
-
 export const DECKS: Deck[] = [
   {
     id: "compound",
@@ -73,6 +76,7 @@ export const DECKS: Deck[] = [
         subtitle: "Small, steady growth, on repeat.",
         tags: ["Personal finance", "Beginner"],
         backdrop: "orb",
+        scene: { name: "spiral", place: "right" },
       },
       {
         kind: "stat",
@@ -81,8 +85,7 @@ export const DECKS: Deck[] = [
         to: END_VALUE,
         format: usd.format,
         label: "7% a year, 30 years",
-        spark: GROWTH_CURVE,
-        backdrop: "rings",
+        scene: { name: "moneyCurve", place: "right" },
       },
       {
         kind: "versus",
@@ -92,7 +95,7 @@ export const DECKS: Deck[] = [
         left: { label: "Start at 35", value: valueAfter(30), caption: "30 years of growth" },
         right: { label: "Start at 25", value: valueAfter(40), caption: "40 years of growth" },
         format: usd.format,
-        backdrop: "grid",
+        scene: { name: "race", place: "full" },
       },
       {
         kind: "bars",
@@ -102,7 +105,7 @@ export const DECKS: Deck[] = [
         bars: DECADES,
         highlight: DECADES.length - 1,
         callout: "7.6× in 30 years",
-        backdrop: "dots",
+        scene: { name: "snowfall", place: "full" },
       },
       {
         kind: "timeline",
@@ -111,7 +114,7 @@ export const DECKS: Deck[] = [
         serif: "lifting.",
         milestones: MILESTONES,
         highlight: MILESTONES.length - 1,
-        backdrop: "grid",
+        scene: { name: "starTrails", place: "full" },
       },
     ],
   },
@@ -129,6 +132,7 @@ export const DECKS: Deck[] = [
         subtitle: "Where we landed, and what comes next.",
         tags: ["Board update", "FY 2026"],
         backdrop: "orb",
+        scene: { name: "dashboard", place: "right" },
       },
       {
         kind: "kpis",
@@ -140,6 +144,7 @@ export const DECKS: Deck[] = [
           { label: "Customers", from: 0, to: 1840, format: count, delta: "+62%", spark: [0, 0.3, 0.55, 0.7, 1] },
           { label: "Margin", from: 0, to: 78, format: percent, delta: "+6 pts", spark: [0.4, 0.5, 0.45, 0.7, 1] },
         ],
+        scene: { name: "ticker", place: "full" },
       },
       {
         kind: "bars",
@@ -155,6 +160,7 @@ export const DECKS: Deck[] = [
         highlight: 3,
         callout: "+100% since Q1",
         backdrop: "dots",
+        scene: { name: "sparksRise", place: "full" },
       },
       {
         kind: "ring",
@@ -163,7 +169,7 @@ export const DECKS: Deck[] = [
         serif: "stayed.",
         value: 94,
         label: "renewed their plan this quarter",
-        backdrop: "rings",
+        scene: { name: "radar", place: "full" },
       },
       {
         kind: "line",
@@ -173,7 +179,7 @@ export const DECKS: Deck[] = [
         values: [0.12, 0.2, 0.26, 0.34, 0.4, 0.49, 0.56, 0.63, 0.72, 0.8, 0.9, 1],
         caption: "Monthly active customers, January to December.",
         callout: "Up every month",
-        backdrop: "grid",
+        scene: { name: "network", place: "full" },
       },
     ],
   },
@@ -190,7 +196,7 @@ export const DECKS: Deck[] = [
         serif: "form",
         subtitle: "From a giant star to a point of no return.",
         tags: ["Astrophysics", "Explainer"],
-        backdrop: "orb",
+        scene: { name: "warp", place: "full" },
       },
       {
         kind: "stat",
@@ -199,7 +205,7 @@ export const DECKS: Deck[] = [
         to: 20,
         format: (value) => `${value}×`,
         label: "the Sun's mass, roughly",
-        backdrop: "rings",
+        scene: { name: "stars", place: "right" },
       },
       {
         kind: "blackhole",
@@ -218,7 +224,7 @@ export const DECKS: Deck[] = [
           { label: "Step 3", value: "Black hole", caption: "Not even light escapes" },
         ],
         highlight: 2,
-        backdrop: "grid",
+        scene: { name: "collapse", place: "full" },
       },
       {
         kind: "line",
@@ -228,7 +234,7 @@ export const DECKS: Deck[] = [
         values: [0.02, 0.03, 0.05, 0.08, 0.13, 0.22, 0.4, 0.7, 1],
         caption: "Squeeze the same mass smaller and surface gravity climbs.",
         callout: "g ∝ 1/r²",
-        backdrop: "dots",
+        scene: { name: "gravityWell", place: "full" },
       },
     ],
   },
@@ -245,7 +251,7 @@ export const DECKS: Deck[] = [
         serif: "launch",
         subtitle: "Six weeks from beta to launch day.",
         tags: ["Go-to-market", "6 weeks"],
-        backdrop: "orb",
+        scene: { name: "rocket", place: "right" },
       },
       {
         kind: "features",
@@ -257,7 +263,7 @@ export const DECKS: Deck[] = [
           { icon: "palette", title: "Custom themes", body: "Your fonts and colors." },
           { icon: "link", title: "One-click sharing", body: "Send a link, not a file." },
         ],
-        backdrop: "grid",
+        scene: { name: "confetti", place: "full" },
       },
       {
         kind: "timeline",
@@ -270,7 +276,7 @@ export const DECKS: Deck[] = [
           { label: "Week 6", value: "Launch", caption: "Go live" },
         ],
         highlight: 2,
-        backdrop: "dots",
+        scene: { name: "trajectory", place: "full" },
       },
       {
         kind: "ring",
@@ -279,7 +285,7 @@ export const DECKS: Deck[] = [
         serif: "there.",
         value: 80,
         label: "of launch tasks done",
-        backdrop: "rings",
+        scene: { name: "gears", place: "full" },
       },
       {
         kind: "stat",
@@ -288,7 +294,7 @@ export const DECKS: Deck[] = [
         to: 42,
         format: (value) => String(value),
         label: "days to launch",
-        backdrop: "orb",
+        scene: { name: "liftoff", place: "right" },
       },
     ],
   },
