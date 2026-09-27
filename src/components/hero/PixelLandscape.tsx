@@ -131,7 +131,7 @@ export function PixelLandscape() {
 
       const copy = section!.querySelector("[data-hero-copy]")?.getBoundingClientRect();
       const copyBottom = copy ? (copy.bottom - box.top) / scale : H * 0.5;
-      horizon = Math.round(Math.min(H - 60 / scale - 36, Math.max(copyBottom + 44 / scale, H * 0.54)));
+      horizon = Math.round(Math.min(H - 60 / scale - 36, Math.max(copyBottom + 28 / scale, H * 0.46)));
       fadeRows = Math.max(6, Math.round(56 / scale));
       buildSky();
       if (introStart >= 0 || reveal.length === 0) buildReveal();
@@ -319,7 +319,8 @@ export function PixelLandscape() {
         }
       }
 
-      drawProjector(t, crests[3]);
+      // On the grey hill behind the front one, so it stays clear of the rising window.
+      drawProjector(t, crests[2]);
       drawLife(t, crests[3]);
 
       // Bottom rows dissolve into the page.

@@ -116,12 +116,12 @@ export function HeroStage({ copy }: { copy: React.ReactNode }) {
       <section
         id="top"
         aria-labelledby="hero-title"
-        className="relative isolate flex min-h-[92svh] flex-col overflow-hidden"
+        className="relative isolate flex flex-col overflow-hidden"
       >
         <PixelLandscape />
-        <Container className="flex flex-col items-center pt-28 text-center md:pt-36">{copy}</Container>
+        <Container className="flex flex-col items-center pt-24 text-center md:pt-28">{copy}</Container>
         {/* Chips sit over the hills; the window covers the band below them as it rises. */}
-        <Container className="mt-auto flex justify-center pt-16 pb-[150px] md:pb-[160px]">
+        <Container className="mt-auto flex justify-center pt-12 pb-[150px] md:pb-[160px]">
           <div
             className="rise-in flex flex-wrap items-center justify-center gap-2"
             style={{ "--delay": "880ms" } as React.CSSProperties}
@@ -150,7 +150,14 @@ export function HeroStage({ copy }: { copy: React.ReactNode }) {
         </Container>
       </section>
 
-      <Container className="relative z-10 -mt-[120px] flex justify-center overflow-x-clip">
+      <div className="relative z-10 -mt-[120px]">
+        {/* A faint hairline grid fills the space either side of the window. */}
+        <div
+          aria-hidden="true"
+          className="hero-grid pointer-events-none absolute inset-x-0 top-[140px] -bottom-[80px] -z-10"
+        />
+        {/* Wider than the page container, so the demo slides get more of the screen. */}
+        <div className="mx-auto flex w-full max-w-[1384px] justify-center overflow-x-clip px-5 sm:px-8">
         <ProductWindow
           windowRef={windowRef}
           deck={deck}
@@ -159,7 +166,8 @@ export function HeroStage({ copy }: { copy: React.ReactNode }) {
           paused={paused}
           onTogglePause={() => setPaused((value) => !value)}
         />
-      </Container>
+        </div>
+      </div>
     </>
   );
 }
@@ -194,7 +202,7 @@ function ProductWindow({
   });
 
   return (
-    <div ref={windowRef} className="relative w-full max-w-[1120px] [perspective:1800px]">
+    <div ref={windowRef} className="relative w-full max-w-[1320px] [perspective:1800px]">
       {/* Ember spotlight behind the window. */}
       <div
         aria-hidden="true"
