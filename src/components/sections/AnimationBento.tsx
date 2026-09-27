@@ -1,6 +1,5 @@
 "use client";
 
-import { useRef } from "react";
 import { m } from "motion/react";
 import { BarChart } from "@/components/anim/BarChart";
 import { CountUp } from "@/components/anim/CountUp";
@@ -10,8 +9,9 @@ import { SplitCompare } from "@/components/anim/SplitCompare";
 import { StaggerList } from "@/components/anim/StaggerList";
 import { TimelineDraw } from "@/components/anim/TimelineDraw";
 import { TypeReveal } from "@/components/anim/TypeReveal";
-import { useLoopClock, useLoopFade, useOnScreen, type Clock } from "@/components/anim/clock";
+import { useLoopClock, useLoopFade, useNearOnScreen, type Clock } from "@/components/anim/clock";
 import { Reveal } from "@/components/ui/Reveal";
+import { SpotlightCard } from "@/components/ui/SpotlightCard";
 import { cn } from "@/lib/cn";
 import { STAGGER } from "@/lib/motion";
 
@@ -157,7 +157,7 @@ const tiles: TileSpec[] = [
 
 export function AnimationBento() {
   return (
-    <ul className="mt-14 grid grid-flow-row-dense gap-4 md:mt-16 md:grid-cols-2 lg:grid-cols-4">
+    <ul className="mt-12 grid grid-flow-row-dense gap-4 md:grid-cols-2 lg:grid-cols-4">
       {tiles.map((tile, index) => (
         <Reveal key={tile.name} as="li" delay={(index % 4) * STAGGER} className={cn("flex", tile.className)}>
           <Tile tile={tile} />
@@ -168,41 +168,21 @@ export function AnimationBento() {
 }
 
 function Tile({ tile }: { tile: TileSpec }) {
-  const cardRef = useRef<HTMLElement>(null);
-  const { ref, onScreen } = useOnScreen<HTMLDivElement>(0.25);
+  const { ref, onScreen, near } = useNearOnScreen<HTMLDivElement>(0.25);
   const clock = useLoopClock(tile.loop, onScreen);
   const fade = useLoopFade(clock, tile.loop);
 
   return (
-    <article
-      ref={cardRef}
-      className="group stage-card relative flex w-full flex-col overflow-hidden rounded-card"
-      onPointerMove={(event) => {
-        const card = cardRef.current;
-        if (!card) return;
-        const box = card.getBoundingClientRect();
-        card.style.setProperty("--mx", `${event.clientX - box.left}px`);
-        card.style.setProperty("--my", `${event.clientY - box.top}px`);
-      }}
-    >
-      {/* Spotlight that follows the cursor. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-        style={{
-          background:
-            "radial-gradient(360px circle at var(--mx, 50%) var(--my, 50%), rgba(255,255,255,0.075), transparent 45%)",
-        }}
-      />
+    <SpotlightCard className="stage-card flex w-full flex-col overflow-hidden rounded-card">
       <div ref={ref} role="img" aria-label={tile.label} className="@container relative grid h-[248px] place-items-center">
         <m.div className="grid h-full w-full place-items-center" style={{ opacity: fade }}>
-          {tile.render(clock)}
+          {near && tile.render(clock)}
         </m.div>
       </div>
       <div className="relative border-t border-stage-line px-6 py-5">
         <h3 className="text-[17px] leading-6 font-medium tracking-[-0.01em] text-stage-ink">{tile.name}</h3>
         <p className="mt-1 text-[15px] leading-6 text-stage-muted">{tile.useCase}</p>
       </div>
-    </article>
+    </SpotlightCard>
   );
 }

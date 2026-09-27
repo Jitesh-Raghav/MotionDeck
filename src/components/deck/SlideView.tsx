@@ -30,14 +30,21 @@ import { SLIDE_MS } from "./timing";
  * the clock.
  */
 
-type SlideViewProps = { slide: SlideSpec; clock: Clock; start: number; className?: string };
+type SlideViewProps = {
+  slide: SlideSpec;
+  clock: Clock;
+  start: number;
+  /** Draw the slide's motion-graphic scene (off for small, many-at-once uses). */
+  scene?: boolean;
+  className?: string;
+};
 
-export function SlideView({ slide, clock, start, className }: SlideViewProps) {
+export function SlideView({ slide, clock, start, scene = true, className }: SlideViewProps) {
   return (
     <div className={cn("slide-root absolute inset-0", className)}>
       <div className="slide-inner absolute inset-0 overflow-hidden">
         <Backdrop kind={slide.backdrop ?? "none"} clock={clock} start={start} length={SLIDE_MS} />
-        {slide.scene && (
+        {scene && slide.scene && (
           <SceneCanvas
             scene={slide.scene.name}
             clock={clock}

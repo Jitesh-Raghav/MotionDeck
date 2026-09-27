@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { m, useTransform } from "motion/react";
 import { useLoopClock, useLoopFade, useSpan, type Clock } from "@/components/anim/clock";
 import { DECKS } from "@/components/deck/decks";
@@ -183,6 +184,9 @@ const RENDER_START = MODAL_AT + 400;
 const RENDER_END = RENDER_START + 2000;
 
 export function ExportScene({ playing, className }: SceneProps) {
+  // Mount the deck the first time this scene plays; it stays mounted after.
+  const [started, setStarted] = useState(false);
+  if (playing && !started) setStarted(true);
   const clock = useLoopClock(EXPORT_LOOP, playing, RENDER_END + 900);
   const fade = useLoopFade(clock, EXPORT_LOOP);
   const modal = useSpan(clock, MODAL_AT, 400);
@@ -201,7 +205,7 @@ export function ExportScene({ playing, className }: SceneProps) {
         </span>
       </div>
       <div className="relative aspect-video overflow-hidden rounded-xl bg-stage ring-1 ring-stage-line">
-        <DeckPlayer deck={DECKS[0]} clock={clock} />
+        {started && <DeckPlayer deck={DECKS[0]} clock={clock} />}
         <m.div className="absolute inset-0 bg-stage/70" style={{ opacity: modal }} />
         <m.div
           className="stage-card absolute inset-x-[12%] top-1/2 -translate-y-1/2 rounded-2xl p-5"

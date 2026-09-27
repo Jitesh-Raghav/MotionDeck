@@ -6,7 +6,7 @@ import { CountUp } from "@/components/anim/CountUp";
 import { LineDraw } from "@/components/anim/LineDraw";
 import { StaggerList } from "@/components/anim/StaggerList";
 import { TypeReveal } from "@/components/anim/TypeReveal";
-import { useLoopClock, useLoopFade, useOnScreen, type Clock } from "@/components/anim/clock";
+import { useLoopClock, useLoopFade, useNearOnScreen, type Clock } from "@/components/anim/clock";
 import { Reveal } from "@/components/ui/Reveal";
 import { STAGGER } from "@/lib/motion";
 
@@ -90,7 +90,7 @@ const audiences: Audience[] = [
 
 export function BuiltForCards() {
   return (
-    <ul className="mt-14 grid gap-4 sm:grid-cols-2 md:mt-16 lg:grid-cols-4">
+    <ul className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {audiences.map((audience, index) => (
         <Reveal key={audience.title} as="li" delay={index * STAGGER} className="flex">
           <Card audience={audience} />
@@ -101,7 +101,7 @@ export function BuiltForCards() {
 }
 
 function Card({ audience }: { audience: Audience }) {
-  const { ref, onScreen } = useOnScreen<HTMLDivElement>(0.3);
+  const { ref, onScreen, near } = useNearOnScreen<HTMLDivElement>(0.3);
   const clock = useLoopClock(LOOP, onScreen);
   const fade = useLoopFade(clock, LOOP);
   return (
@@ -113,7 +113,7 @@ function Card({ audience }: { audience: Audience }) {
         className="slide-light relative grid aspect-[16/11] place-items-center overflow-hidden rounded-[14px] bg-bg ring-1 ring-hairline"
       >
         <m.div className="grid w-full place-items-center" style={{ opacity: fade }}>
-          {audience.mini(clock)}
+          {near && audience.mini(clock)}
         </m.div>
       </div>
       <div className="px-3 pt-5 pb-3">

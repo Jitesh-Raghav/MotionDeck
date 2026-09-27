@@ -15,7 +15,9 @@ import type { Clock } from "@/components/anim/clock";
 import { DECKS, type Deck } from "@/components/deck/decks";
 import { DeckPlayer, SLIDE_MS, deckDuration, slideSettled } from "@/components/deck/DeckPlayer";
 import { SlideStill } from "@/components/deck/SlideView";
+import { Container } from "@/components/ui/layout";
 import { LogoMark } from "@/components/ui/Wordmark";
+import { PixelLandscape } from "./PixelLandscape";
 import { cn } from "@/lib/cn";
 import { ease } from "@/lib/motion";
 
@@ -51,21 +53,30 @@ const subscribeWide = (onChange: () => void) => {
 const useWideScreen = () =>
   useSyncExternalStore(subscribeWide, () => window.matchMedia(WIDE).matches, () => false);
 
-/** Example chips plus the product window that plays the chosen deck. */
-export function HeroShowcase() {
+/**
+ * The hero stage: the pixel landscape with the copy over its sky, the example
+ * chips over the hills, and the product window rising from behind them.
+ */
+export function HeroStage({ copy }: { copy: React.ReactNode }) {
   const [deckIndex, setDeckIndex] = useState(0);
   const [paused, setPaused] = useState(false);
-  // Start once the page has settled, so the demo never competes with first load.
+  // The demo starts on the visitor's first scroll, pointer move, touch or key
+  // (the window rises into view with scrolling), or after five seconds. It
+  // never competes with the first load.
   const [ready, setReady] = useState(false);
   useEffect(() => {
-    const start = () => setReady(true);
-    const id = window.requestIdleCallback
-      ? window.requestIdleCallback(start, { timeout: 1200 })
-      : window.setTimeout(start, 600);
-    return () => {
-      if (window.cancelIdleCallback) window.cancelIdleCallback(id);
-      else window.clearTimeout(id);
+    const events = ["scroll", "pointermove", "touchstart", "keydown"] as const;
+    const start = () => {
+      setReady(true);
+      cleanup();
     };
+    const timer = window.setTimeout(start, 5000);
+    const cleanup = () => {
+      window.clearTimeout(timer);
+      for (const name of events) window.removeEventListener(name, start);
+    };
+    for (const name of events) window.addEventListener(name, start, { passive: true, once: true });
+    return cleanup;
   }, []);
   const deck = DECKS[deckIndex];
   const timing = useMemo(() => timingFor(deck), [deck]);
@@ -101,37 +112,55 @@ export function HeroShowcase() {
   }
 
   return (
-    <div className="mt-14 flex w-full flex-col items-center md:mt-16">
-      <div data-hero-clear className="flex flex-wrap items-center justify-center gap-2">
-        <span className="w-full text-[15px] text-muted sm:mr-1 sm:w-auto">Try an example:</span>
+    <>
+      <section
+        id="top"
+        aria-labelledby="hero-title"
+        className="relative isolate flex min-h-[92svh] flex-col overflow-hidden"
+      >
+        <PixelLandscape />
+        <Container className="flex flex-col items-center pt-28 text-center md:pt-36">{copy}</Container>
+        {/* Chips sit over the hills; the window covers the band below them as it rises. */}
+        <Container className="mt-auto flex justify-center pt-16 pb-[150px] md:pb-[160px]">
+          <div
+            className="rise-in flex flex-wrap items-center justify-center gap-2"
+            style={{ "--delay": "880ms" } as React.CSSProperties}
+          >
+            <span className="rounded-full bg-surface/85 px-3.5 py-1.5 text-[15px] text-muted backdrop-blur-sm max-sm:w-full max-sm:bg-transparent max-sm:backdrop-blur-none sm:mr-1">
+              Try an example:
+            </span>
         {DECKS.map((example, index) => (
           <button
             key={example.id}
             type="button"
             aria-pressed={index === deckIndex}
             onClick={() => choose(index)}
-            className={cn(
-              "inline-flex h-9 items-center gap-2 rounded-full border px-3.5 text-[15px] transition-colors duration-150",
-              index === deckIndex
-                ? "border-ink bg-surface text-ink"
-                : "border-hairline-strong bg-surface/60 text-muted hover:text-ink",
-            )}
-          >
-            {index === deckIndex && <span aria-hidden="true" className="size-1.5 rounded-full bg-accent" />}
-            {example.chip}
-          </button>
-        ))}
-      </div>
+              className={cn(
+                "inline-flex h-9 items-center gap-2 rounded-full border px-3.5 text-[15px] transition-colors duration-150",
+                index === deckIndex
+                  ? "border-ink bg-ink text-bg"
+                  : "border-hairline-strong bg-surface/90 text-ink backdrop-blur-sm hover:bg-surface",
+              )}
+            >
+              {index === deckIndex && <span aria-hidden="true" className="size-1.5 rounded-full bg-accent" />}
+              {example.chip}
+            </button>
+          ))}
+          </div>
+        </Container>
+      </section>
 
-      <ProductWindow
-        windowRef={windowRef}
-        deck={deck}
-        clock={clock}
-        timing={timing}
-        paused={paused}
-        onTogglePause={() => setPaused((value) => !value)}
-      />
-    </div>
+      <Container className="relative z-10 -mt-[120px] flex justify-center overflow-x-clip">
+        <ProductWindow
+          windowRef={windowRef}
+          deck={deck}
+          clock={clock}
+          timing={timing}
+          paused={paused}
+          onTogglePause={() => setPaused((value) => !value)}
+        />
+      </Container>
+    </>
   );
 }
 
@@ -150,10 +179,12 @@ function ProductWindow({
   paused: boolean;
   onTogglePause: () => void;
 }) {
-  // Starts tilted back, flattens as it scrolls up the page.
-  const { scrollYProgress } = useScroll({ target: windowRef, offset: ["start end", "start 0.2"] });
-  const rotateX = useTransform(scrollYProgress, [0, 1], [14, 0]);
-  const scale = useTransform(scrollYProgress, [0, 1], [0.94, 1]);
+  // Rises from behind the hills: starts low, tilted back and small, then
+  // lifts, stands up and settles as the page scrolls.
+  const { scrollYProgress } = useScroll({ target: windowRef, offset: ["start end", "start 0.35"] });
+  const y = useTransform(scrollYProgress, [0, 1], [120, 0]);
+  const rotateX = useTransform(scrollYProgress, [0, 1], [18, 0]);
+  const scale = useTransform(scrollYProgress, [0, 1], [0.92, 1]);
 
   const wide = useWideScreen();
   const [active, setActive] = useState(-1);
@@ -163,11 +194,7 @@ function ProductWindow({
   });
 
   return (
-    <div
-      ref={windowRef}
-      data-hero-horizon
-      className="relative mt-10 w-full max-w-[1120px] [perspective:1800px] md:mt-12"
-    >
+    <div ref={windowRef} className="relative w-full max-w-[1120px] [perspective:1800px]">
       {/* Ember spotlight behind the window. */}
       <div
         aria-hidden="true"
@@ -176,7 +203,7 @@ function ProductWindow({
       <m.figure
         // Reduced motion flattens the tilt in CSS, so server and client HTML match.
         className="on-dark slide-dark relative overflow-hidden rounded-window bg-stage-2 text-left shadow-window ring-1 ring-white/[0.07] motion-reduce:transform-none!"
-        style={{ rotateX, scale, transformOrigin: "50% 0%" }}
+        style={{ y, rotateX, scale, transformOrigin: "50% 0%" }}
       >
         <figcaption className="sr-only">
           Example: the Motiondeck editor turns the prompt “{deck.prompt}” into a {deck.slides.length}-slide
@@ -267,11 +294,15 @@ function Thumbnail({
       <span className="w-3 pt-0.5 font-mono text-[11px] text-stage-muted">{index + 1}</span>
       <div
         className={cn(
-          "relative aspect-video flex-1 overflow-hidden rounded-[6px] bg-stage ring-1 transition-shadow duration-300",
+          "relative h-[67.5px] w-[120px] shrink-0 overflow-hidden rounded-[6px] bg-stage ring-1 transition-shadow duration-300",
           active ? "ring-2 ring-accent" : "ring-stage-line",
         )}
       >
-        {children}
+        {/*
+          A true miniature: the slide lays out at 640×360, where its type and
+          graphics have room, then scales down to fit (120 / 640 = 0.1875).
+        */}
+        <div className="absolute top-0 left-0 h-[360px] w-[640px] origin-top-left scale-[0.1875]">{children}</div>
       </div>
     </m.div>
   );

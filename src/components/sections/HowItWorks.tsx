@@ -1,5 +1,5 @@
 import { HowItWorksStory } from "@/components/story/HowItWorksStory";
-import { Container, Section, SectionHeader, Serif } from "@/components/ui/layout";
+import { Container, Section, SectionHeader } from "@/components/ui/layout";
 
 export function HowItWorks() {
   return (
@@ -8,11 +8,8 @@ export function HowItWorks() {
         <SectionHeader
           id="how-title"
           eyebrow="How it works"
-          title={
-            <>
-              From idea to <Serif>deck</Serif> in three steps.
-            </>
-          }
+          title="From idea to deck in three steps."
+          serif="deck"
           subhead="You stay in control at every step."
         />
         <HowItWorksStory />

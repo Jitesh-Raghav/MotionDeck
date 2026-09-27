@@ -1,7 +1,7 @@
 "use client";
 
 import { m, useTransform } from "motion/react";
-import { useLoopClock, useOnScreen, type Clock } from "@/components/anim/clock";
+import { useLoopClock, useNear, useOnScreen, type Clock } from "@/components/anim/clock";
 import { DECKS } from "@/components/deck/decks";
 import { DeckPlayer, deckDuration, slideSettled } from "@/components/deck/DeckPlayer";
 import { cn } from "@/lib/cn";
@@ -12,18 +12,24 @@ const LOOP = deckDuration(DECK);
 /** The same deck, in sync, at 16:9, 9:16 and 1:1. */
 export function FormatFrames() {
   const { ref, onScreen } = useOnScreen<HTMLDivElement>(0.2);
+  const { ref: nearRef, near } = useNear<HTMLDivElement>();
+  // One element serves both observers.
+  const setRef = (element: HTMLDivElement | null) => {
+    ref.current = element;
+    nearRef.current = element;
+  };
   const clock = useLoopClock(LOOP, onScreen, slideSettled(1));
 
   return (
     <div
-      ref={ref}
+      ref={setRef}
       role="img"
       aria-label="The same Q4 results deck playing at three sizes: 16:9 for YouTube, 9:16 for Reels and Shorts, and 1:1 for LinkedIn."
-      className="mt-14 grid grid-cols-2 items-center gap-x-4 gap-y-10 md:mt-20 lg:grid-cols-[1.9fr_0.72fr_1.12fr] lg:gap-8"
+      className="mt-12 grid grid-cols-2 items-center gap-x-4 gap-y-10 lg:grid-cols-[1.9fr_0.72fr_1.12fr] lg:gap-8"
     >
       <Frame label="YouTube" ratio="16:9" className="col-span-2 lg:col-span-1">
         <div className="relative aspect-video overflow-hidden rounded-2xl bg-stage shadow-window ring-1 ring-black/5">
-          <DeckPlayer deck={DECK} clock={clock} />
+          {near && <DeckPlayer deck={DECK} clock={clock} />}
           <VideoProgress clock={clock} />
         </div>
       </Frame>
@@ -34,7 +40,7 @@ export function FormatFrames() {
           <div className="relative aspect-[9/16] overflow-hidden rounded-[28px] bg-stage ring-1 ring-white/[0.06]">
             {/* Content starts below the status bar and notch. */}
             <div className="absolute inset-x-0 top-7 bottom-0">
-              <DeckPlayer deck={DECK} clock={clock} />
+              {near && <DeckPlayer deck={DECK} clock={clock} />}
             </div>
             <span className="absolute top-2.5 left-1/2 h-[18px] w-[64px] -translate-x-1/2 rounded-full bg-black" />
           </div>
@@ -43,7 +49,7 @@ export function FormatFrames() {
 
       <Frame label="LinkedIn" ratio="1:1">
         <div className="relative aspect-square overflow-hidden rounded-2xl bg-stage shadow-window ring-1 ring-black/5">
-          <DeckPlayer deck={DECK} clock={clock} />
+          {near && <DeckPlayer deck={DECK} clock={clock} />}
         </div>
       </Frame>
     </div>
