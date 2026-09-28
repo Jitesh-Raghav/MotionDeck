@@ -89,6 +89,7 @@ export function Pricing() {
                 </ul>
                 <JumpToForm
                   target="final-cta"
+                  location="pricing"
                   className={buttonClasses({
                     variant: plan.featured ? "light" : "secondary",
                     className: "w-full",

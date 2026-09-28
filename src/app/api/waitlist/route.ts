@@ -1,9 +1,10 @@
 import { clientKey, rateLimit } from "@/lib/waitlist/rate-limit";
 import { StoreUnavailableError, addToWaitlist } from "@/lib/waitlist/store";
 import type { WaitlistResponse, WaitlistStatus } from "@/lib/waitlist/types";
-import { normalizeEmail, normalizeSource } from "@/lib/waitlist/validate";
+import { normalizeAttribution, normalizeEmail, normalizeSource } from "@/lib/waitlist/validate";
 
-const MAX_BODY_LENGTH = 2048;
+// Email, source and five attribution fields of up to 200 characters each.
+const MAX_BODY_LENGTH = 4096;
 
 function reply(status: WaitlistStatus, httpStatus: number, headers?: Record<string, string>) {
   return Response.json({ status } satisfies WaitlistResponse, {
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
   if (!email || !source) return reply("invalid", 400);
 
   try {
-    const result = await addToWaitlist(email, source);
+    const result = await addToWaitlist(email, source, normalizeAttribution(body));
     return result === "joined" ? reply("joined", 201) : reply("already_joined", 200);
   } catch (error) {
     console.error("[waitlist]", error);

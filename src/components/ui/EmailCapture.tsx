@@ -5,11 +5,15 @@ import { animate, m, useReducedMotion } from "motion/react";
 import { Arrow, Beam, buttonClasses } from "@/components/ui/button";
 import { FORM_IDS } from "@/components/ui/JumpToForm";
 import { cn } from "@/lib/cn";
+import { getAttribution } from "@/lib/analytics/attribution";
+import { track, type CtaLocation } from "@/lib/analytics/events";
 import { EASE } from "@/lib/motion";
 import type { WaitlistResponse, WaitlistSource, WaitlistStatus } from "@/lib/waitlist/types";
 import { isValidEmail } from "@/lib/waitlist/validate";
 
 type FormState = "idle" | "submitting" | WaitlistStatus;
+
+const LOCATIONS: Record<WaitlistSource, CtaLocation> = { hero: "hero", "final-cta": "final" };
 
 const done = (state: FormState) => state === "joined" || state === "already_joined";
 
@@ -46,6 +50,7 @@ export function EmailCapture({
   // Where the success panel grows from: the button's share of the pill width.
   const [from, setFrom] = useState(0.3);
   const dark = tone === "dark";
+  const location = LOCATIONS[source];
   const reduce = useReducedMotion();
 
   // A gentle three-step shake. Imperative, so the input keeps its focus.
@@ -59,7 +64,11 @@ export function EmailCapture({
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (state === "submitting" || done(state)) return;
-    if (!isValidEmail(email)) return fail("invalid");
+    track("waitlist_submit", { location });
+    if (!isValidEmail(email)) {
+      track("waitlist_error", { location, reason: "invalid_email" });
+      return fail("invalid");
+    }
 
     setState("submitting");
     const company = new FormData(event.currentTarget).get("company");
@@ -67,7 +76,7 @@ export function EmailCapture({
       const response = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, source, company }),
+        body: JSON.stringify({ email, source, company, ...getAttribution() }),
       });
       const data = (await response.json()) as WaitlistResponse;
       if (done(data.status)) {
@@ -75,8 +84,13 @@ export function EmailCapture({
         setFrom((buttonRef.current?.offsetWidth ?? pill * 0.3) / pill);
         setState(data.status);
         setEmail("");
-      } else fail(data.status in errors ? data.status : "error");
+        track("waitlist_success", { location, already_joined: data.status === "already_joined" });
+      } else {
+        track("waitlist_error", { location, reason: data.status });
+        fail(data.status in errors ? data.status : "error");
+      }
     } catch {
+      track("waitlist_error", { location, reason: "network" });
       fail("error");
     }
   }
@@ -131,6 +145,7 @@ export function EmailCapture({
           ref={buttonRef}
           type="submit"
           disabled={state === "submitting"}
+          onClick={() => track("cta_click", { location })}
           aria-label={state === "submitting" ? "Joining the waitlist" : undefined}
           className={buttonClasses({
             variant: dark ? "light" : "primary",

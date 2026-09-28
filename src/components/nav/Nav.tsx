@@ -52,7 +52,7 @@ export function Nav() {
             ))}
           </ul>
         </nav>
-        <JumpToForm target="hero" className={buttonClasses({ size: "sm", className: "relative" })}>
+        <JumpToForm target="hero" location="nav" className={buttonClasses({ size: "sm", className: "relative" })}>
           <Beam />
           Get early access
           <Arrow />
