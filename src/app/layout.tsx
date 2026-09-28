@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
+import { AnalyticsProvider } from "@/components/providers/AnalyticsProvider";
+import { SectionViews } from "@/components/providers/SectionViews";
 import { MotionProvider } from "@/components/providers/MotionProvider";
 import { site } from "@/lib/site";
 import "./globals.css";
@@ -67,7 +69,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: revealScript }} />
       </head>
       <body>
-        <MotionProvider>{children}</MotionProvider>
+        <AnalyticsProvider>
+          <MotionProvider>{children}</MotionProvider>
+          <SectionViews />
+        </AnalyticsProvider>
         <div aria-hidden="true" className="grain" />
       </body>
     </html>

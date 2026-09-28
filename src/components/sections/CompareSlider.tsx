@@ -6,6 +6,7 @@ import { BarChart } from "@/components/anim/BarChart";
 import { CountUp } from "@/components/anim/CountUp";
 import { TypeReveal } from "@/components/anim/TypeReveal";
 import { useLoopClock, useLoopFade, useOnScreen, useSpan, type Clock } from "@/components/anim/clock";
+import { trackOnce } from "@/lib/analytics/events";
 import { cn } from "@/lib/cn";
 
 const LOOP = 5600;
@@ -49,6 +50,7 @@ export function CompareSlider() {
     };
     if (!(event.key in keys)) return;
     event.preventDefault();
+    trackOnce("motion_slider_used", {});
     setPosition(Math.min(100, Math.max(0, keys[event.key])));
   }
 
@@ -62,7 +64,11 @@ export function CompareSlider() {
           event.currentTarget.setPointerCapture(event.pointerId);
           moveTo(event.clientX);
         }}
-        onPointerMove={(event) => dragging.current && moveTo(event.clientX)}
+        onPointerMove={(event) => {
+          if (!dragging.current) return;
+          trackOnce("motion_slider_used", {});
+          moveTo(event.clientX);
+        }}
         onPointerUp={() => (dragging.current = false)}
         onPointerCancel={() => (dragging.current = false)}
       >

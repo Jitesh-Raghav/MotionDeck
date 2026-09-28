@@ -18,6 +18,7 @@ import { SlideStill } from "@/components/deck/SlideView";
 import { Container } from "@/components/ui/layout";
 import { LogoMark } from "@/components/ui/Wordmark";
 import { PixelLandscape } from "./PixelLandscape";
+import { track } from "@/lib/analytics/events";
 import { cn } from "@/lib/cn";
 import { ease } from "@/lib/motion";
 
@@ -106,6 +107,7 @@ export function HeroStage({ copy }: { copy: React.ReactNode }) {
   });
 
   function choose(index: number) {
+    track("example_chip_click", { topic: DECKS[index].id });
     setPaused(false);
     if (index === deckIndex) clock.set(reduce ? timing.settled : 0);
     else setDeckIndex(index);
